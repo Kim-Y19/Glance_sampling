@@ -295,7 +295,7 @@ Counter-meature crash probability = %.2f.
     filter(caseID <= 42) # Plot 42 cases on 7x6 grid. 
 
     
-    # Baseline collision probability
+    # Baseline collision probability.
     
     # 1D.
     ggplot(plt) +
@@ -305,6 +305,7 @@ Counter-meature crash probability = %.2f.
            y = "Baseline collision probability (%)",
            colour = bquote('Maximal deceleration '(km/s^2))) +
       facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+      theme_classic() + 
       theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
             strip.background = element_blank(),
             strip.placement = "outside",
@@ -326,6 +327,7 @@ Counter-meature crash probability = %.2f.
            y = bquote('Maximal deceleration '(km/s^2)),
            fill = "Baseline collision probability (%)") +
       facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+      theme_classic() + 
       theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
             strip.background = element_blank(),
             strip.placement = "outside",
@@ -340,8 +342,6 @@ Counter-meature crash probability = %.2f.
     ggsave(filename, width = 160, height = 100, unit = "mm", dpi = 1000)
     
 
-    
-    
     # Baseline impact speed.
     
     # 1D.
@@ -352,6 +352,7 @@ Counter-meature crash probability = %.2f.
            y = "Baseline impact speed (km/h)",
            colour = bquote('Maximal deceleration '(km/s^2))) +
       facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+      theme_classic() + 
       theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
             strip.background = element_blank(),
             strip.placement = "outside",
@@ -373,6 +374,7 @@ Counter-meature crash probability = %.2f.
            y = bquote('Maximal deceleration '(km/s^2)),
            fill = "Baseline impact speed (km/h)") +
       facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+      theme_classic() + 
       theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
             strip.background = element_blank(),
             strip.placement = "outside",
@@ -398,6 +400,7 @@ Counter-meature crash probability = %.2f.
              y = "Impact speed reduction (km/h)",
              colour = bquote('Maximal deceleration '(km/s^2))) +
         facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+        theme_classic() + 
         theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
               strip.background = element_blank(),
               strip.placement = "outside",
@@ -420,6 +423,7 @@ Counter-meature crash probability = %.2f.
              y = bquote('Maximal deceleration '(km/s^2)),
              fill = "Impact speed reduction (km/h)") +
         facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+        theme_classic() + 
         theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
               strip.background = element_blank(),
               strip.placement = "outside",
@@ -447,6 +451,7 @@ Counter-meature crash probability = %.2f.
              y = "Injury risk reduction (percentage points)",
              colour = bquote('Maximal deceleration '(km/s^2))) +
         facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+        theme_classic() + 
         theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
               strip.background = element_blank(),
               strip.placement = "outside",
@@ -469,6 +474,7 @@ Counter-meature crash probability = %.2f.
              y = bquote('Maximal deceleration '(km/s^2)),
              fill = "Injury risk reduction (percentage points)") +
         facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+        theme_classic() + 
         theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
               strip.background = element_blank(),
               strip.placement = "outside",
@@ -496,6 +502,7 @@ Counter-meature crash probability = %.2f.
              y = "Countermeasure collision probability (%)",
              colour = bquote('Maximal deceleration '(km/s^2))) +
         facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+        theme_classic() + 
         theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
               strip.background = element_blank(),
               strip.placement = "outside",
@@ -518,6 +525,7 @@ Counter-meature crash probability = %.2f.
              y = bquote('Maximal deceleration '(km/s^2)),
              fill = "Countermeasure collision probability (%)") +
         facet_wrap(~caseID, ncol = 7, nrow = 6, labeller = labeller(caseID = function(x) "")) + 
+        theme_classic() + 
         theme(panel.spacing = unit(0.1, "cm"), # Increase/decrease to increase/reduce horizontal white space between cases
               strip.background = element_blank(),
               strip.placement = "outside",

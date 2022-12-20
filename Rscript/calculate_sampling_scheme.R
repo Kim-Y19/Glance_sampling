@@ -11,9 +11,6 @@ calculate_sampling_scheme <- function(unlabelled,
                                                  "impact speed reduction",
                                                  "injury risk reduction", 
                                                  "crash avoidance"),
-                                      opt_method = c("naive", 
-                                                     "+ prediction uncertainty", 
-                                                     "+ model uncertainty"),
                                       est = NULL,
                                       r2 = NULL) {
 
@@ -82,27 +79,8 @@ calculate_sampling_scheme <- function(unlabelled,
       pred <- 1
       sigma <- 0
     }
-    
-    # If opt_method == "naive":
-    # Naive plug-in method ignoring prediction uncertainty. 
-    if ( opt_method == "naive" ) {
-      sigma <- 0
-      collision_prob0_pred <- collision_prob0_pred^2
-    }   
-    
-    
-    size2 <- collision_prob0_pred * ((pred - mu)^2 + sigma^2)
-    
-    
-    # If opt_method == "+ model uncertainty":
-    # Account for model uncertainty and reduce random fluctuations using weighted 
-    # moving average over model and estimates in current and previous iteration. 
-    if ( opt_method == "+ model uncertainty" ) {
-      prev_size2 <- with(unlabelled, size / eoff_acc_prob)^2 # 'size' from previous iteration.
-      size2 <- size2 / mean(size2) + prev_size2 / mean(prev_size2)
-    }
-    
-    size <- unlabelled$eoff_acc_prob * sqrt(size2)
+
+    size <- unlabelled$eoff_acc_prob * sqrt(collision_prob0_pred * ((pred - mu)^2 + sigma^2))
 
   } 
   

@@ -19,7 +19,6 @@ cat("\14")
 # plot <- FALSE
 # nboot <-  100
 # i <- 1
-# paper <- "stats"
 
 # df$eoff_acc_prob <- 1
 
@@ -27,14 +26,12 @@ for (i in 1:1) {
   tic()
   print(sprintf("%d", i))
   res <- active_sampling(df, 
-                         sampling_method = "importance sampling", 
-                         proposal_dist = "density",
+                         sampling_method = "simple", 
+                         proposal_dist = "NA",
                          target = "NA", 
-                         opt_method = "NA",
                          use_logic = FALSE,
-                         paper = "stats",
                          batch_size = 2, 
-                         niter = 50, 
+                         niter = 10, 
                          verbose = TRUE, 
                          plot = FALSE, 
                          nboot = 500)
