@@ -19,9 +19,7 @@ sim_output <- function(df,input,inputparameter){
     set.seed(k)
     out <- active_sampling (df, sampling_method, 
                             proposal_dist,
-                            target, 
-                            opt_method,
-                            paper = c("stats"),
+                            target,
                             use_logic, # TRUE or FALSE 
                             batch_size,
                             niter,
