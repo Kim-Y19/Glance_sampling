@@ -1,3 +1,25 @@
+sum <- matrix(0, nrow = 4, ncol = 4)
+Sigma_kl <- n * ( diag(new_sample$pi) - tcrossprod((new_sample$pi)) )
+mu_kl <- Sigma_kl + tcrossprod(new_sample$mu)
+for ( k in 1:nrow(new_sample) ) {
+  for ( l in 1:nrow(new_sample) ) {
+    sum <- sum - 0.5 * new_sample$nhits[k] * new_sample$nhits[l] * Sigma_kl[k, l] / mu_kl[k, l] * tcrossprod(new_sample$eoff_acc_prob[k] * Y[k, ]/new_sample$mu[k] - new_sample$eoff_acc_prob[l] * Y[l, ]/new_sample$mu[l])
+  }
+}
+
+sum2 <- matrix(0, nrow = 4, ncol = 4)
+for ( k in 1:nrow(new_sample) ) {
+  sum2 <- sum2 + n / (n - 1) * with(new_sample, nhits * tcrossprod(Y[k, ] * eoff_acc_prob / mu - totals[i, ] / n))
+}
+
+
+
+# Check.
+print(sum)
+print(sum2)
+print(n / (n - 1) * t(X) %*% W %*% X )
+
+
 # Variance estimation using bootstrap method. ----
 crashes <- labelled %>% 
   filter(impact_speed0 > 0 & final_weight > 0)
