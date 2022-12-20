@@ -58,7 +58,7 @@ active_sampling <- function(data,
                             use_logic = FALSE, # TRUE or FALSE. 
                             batch_size = 1,
                             niter = 500, 
-                            nboot = 100, 
+                            nboot = 500, 
                             verbose = FALSE, # TRUE or FALSE.
                             plot = FALSE) { # TRUE or FALSE.
   
@@ -260,11 +260,14 @@ active_sampling <- function(data,
     # Certainty selections.
     labelled %<>% 
       mutate(sim_count0 = 1,
-             sim_count1 = 1)
+             sim_count1 = 1, 
+             nhits = 1)
     
   } else if ( sampling_method == "importance sampling" & proposal_dist == "severity sampling" ) {
     
-    labelled$sim_count0 <- 1
+    labelled %<>% 
+      mutate(sim_count0 = 1, 
+             nhits = 1)
     
   }
   
@@ -588,10 +591,10 @@ active_sampling <- function(data,
                  neff0 = n_seq0[i], 
                  neff1 = n_seq1[i], 
                  neff_tot = n_seq0[i] + n_seq1[i],
-                 nsim0 = sum(labelled$sim_count0), 
-                 nsim1 = sum(labelled$sim_count1), 
-                 nsim_tot = sum(labelled$sim_count0) + sum(labelled$sim_count1),
-                 n_crashes = nrow(crashes)) %>% 
+                 nsim0 = ifelse(use_logic, sum(labelled$sim_count0), sum(labelled$sim_count0 * labelled$nhits)), 
+                 nsim1 = ifelse(use_logic, sum(labelled$sim_count1), sum(labelled$sim_count1 * labelled$nhits))) %>%
+      mutate(nsim_tot = nsim0 + nsim1,
+             n_crashes = nrow(crashes)) %>% 
       add_column(as_tibble(as.list(est))) %>% # Estimates.
       add_column(as_tibble(as.list(sqerr))) %>% # Squared errors.
       add_column(as_tibble(as.list(se_mart)))  %>% # Standard errors.

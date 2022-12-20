@@ -29,11 +29,11 @@ for (i in 1:1) {
                          sampling_method = "simple", 
                          proposal_dist = "NA",
                          target = "NA", 
-                         use_logic = FALSE,
+                         use_logic = TRUE,
                          batch_size = 2, 
-                         niter = 10, 
+                         niter = 20, 
                          verbose = TRUE, 
                          plot = FALSE, 
-                         nboot = 500)
+                         nboot = 0)
   toc()
 }
