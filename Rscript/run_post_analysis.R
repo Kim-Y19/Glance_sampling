@@ -19,7 +19,6 @@ for(j in 1:length(param_input$Sim_n)){
   res_top_loop = replicate(tail(sampling_input$sim_order, 1), data.frame())
   
   for(i in 1:tail(sampling_input$sim_order, 1)){
-    set.seed(1)
     res_in_loop <- sim_output(df,sampling_input[i,],inputparameter)
     print(paste("sampling method",i,"is finished"))
     res_top_loop[[i]] <- res_in_loop
