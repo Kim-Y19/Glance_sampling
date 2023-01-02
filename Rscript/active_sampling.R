@@ -253,24 +253,23 @@ active_sampling <- function(data,
   init <- initialise_grid(data, grid)
   labelled <- init$labelled 
   unlabelled <- init$unlabelled 
-  
+ 
   # Update simulation counts for initialisation.
+  n_init <- 0
   if ( sampling_method == "active sampling" ) {
-    
-    # Certainty selections.
-    labelled %<>% 
-      mutate(sim_count0 = 1,
-             sim_count1 = 1, 
-             nhits = 1)
+   
+    # Remove labelled observations from unlabelled set.
+    unlabelled %<>% 
+      left_join(grid %>% mutate(exclude = 1), by = c("eoff", "acc")) %>% 
+      filter(is.na(exclude))
     
   } else if ( sampling_method == "importance sampling" & proposal_dist == "severity sampling" ) {
     
-    labelled %<>% 
-      mutate(sim_count0 = 1, 
-             nhits = 1)
+    # One simulation per case needed for initialisation.
+    n_init <- nrow(labelled) 
     
-  }
-  
+  } 
+
   # If use_logic = TRUE: reduce simulation counts using logic.
   if ( use_logic ) {
     
@@ -278,12 +277,18 @@ active_sampling <- function(data,
     unlabelled %<>% 
       mutate(sim_count1 = ifelse(impact_speed0 > 0, 1, 0))
     
-    # Number of simulations needed for initialisation.
-    labelled$sim_count0 <- 1
+    # One simulation per case needed for initialisation.
+    # Don't count for active sampling since already counted in labelled set.
+    n_init <- nrow(labelled)  * (sampling_method != "active sampling") 
 
   }
   
-  n_seq0 <- n_seq + sum(labelled$sim_count0)
+  # If no initialisation: start with empty sample.
+  if ( sampling_method != "active sampling"  ) {
+    labelled %<>% filter(1 == 0)
+  }
+
+  n_seq0 <- n_seq + n_init + sum(labelled$sim_count0)
   n_seq1 <- n_seq + sum(labelled$sim_count1)
 
   
@@ -328,8 +333,8 @@ active_sampling <- function(data,
         filter(!(row_number() %in% ix$non_crashes0)) 
       
     }
-  
-    
+
+
     # Update predictions. ----
     if ( sampling_method == "active sampling" && i %in% model_update_iterations ) {
       
@@ -449,7 +454,7 @@ active_sampling <- function(data,
     
     # Sample from multinomial distribution.
     nhits <- as.numeric(rmultinom(n = 1, size = batch_size, prob = prob$sampling_probability))
-    
+
     # Get data for sampled observations.
     new_sample <- unlabelled %>% 
       mutate(batch_size = batch_size, 
@@ -461,25 +466,38 @@ active_sampling <- function(data,
              final_weight = eoff_acc_prob * nhits * sampling_weight) %>% 
       filter(nhits > 0) %>% 
       dplyr::select(caseID, eoff, acc, eoff_acc_prob, sim_count0, sim_count1, iter, batch_size, nhits, pi, mu, sampling_weight, batch_weight, final_weight) %>% 
-      mutate(iter = i)%>%
+      mutate(iter = i) %>%
       left_join(data, by = c("caseID", "eoff", "acc", "eoff_acc_prob"))
 
+
+    # Certainty selections.(Select already labelled instances with probability 1).
+    # Only after first iteration, otherwise set to empty set.
+    if ( i >  1 ) {
+      certainty_selections <- labelled %>% 
+        dplyr::select(-sim_count0, -sim_count1, -batch_size, -nhits, -pi, -mu, -sampling_weight, -batch_weight, -final_weight) %>% 
+        mutate(nhits = 1,
+               pi = 1,
+               mu = 1,
+               sampling_weight = 1, 
+               batch_weight = batch_size * (i - iter) / n_seq[i],
+               final_weight = eoff_acc_prob * batch_weight * nhits * sampling_weight)      
+    } else {
+      certainty_selections <- labelled %>% 
+        filter(0 == 1)
+    }
+
+    
     # Update labelled set.
     labelled %<>% 
       mutate(batch_weight = batch_size / n_seq[i]) %>% # Update batch-weights.
       add_row(new_sample) %>% # Add new sample.
       mutate(final_weight = eoff_acc_prob * batch_weight * nhits * sampling_weight) 
-    
-    # If use_logic = TRUE: re-sampling of selected instances in future iterations
-    # counts as zero simulations.
-    if ( use_logic ) {
-      
-      unlabelled %<>% 
-        mutate(sim_count0 = ifelse(nhits > 0, 0, sim_count0),
-               sim_count1 = ifelse(nhits > 0, 0, sim_count1))    
 
-    }
-   
+    
+    # Remove labelled observations from unlabelled dataset.
+    unlabelled %<>%
+      filter(nhits == 0)
+
     
     # Estimate target quantities. ----
     
@@ -488,14 +506,17 @@ active_sampling <- function(data,
     rewt <- c(n_seq[1], n_seq)[i] / n_seq[i] # Re-weight old batch weights by n_1 + ... n_{k-1} / (n_1 + ... + n_k).
     
     # Estimate totals in current iteration.
-    totals[i, ] <- estimate_totals(new_sample, "final_weight")
+    totals[i, ] <- estimate_totals(new_sample %>% 
+                                     add_row(certainty_selections) %>% 
+                                     mutate(final_weight = eoff_acc_prob * nhits * sampling_weight), 
+                                   "final_weight")
     
     # Pooled estimate of totals.
     t_y <- rewt * t_y + bwt * totals[i, ]
     
     # Pooled estimate of "means among relevant instances".
-    est <- estimate_targets(labelled, "final_weight")
-    
+    est <- estimate_targets(labelled %>% add_row(certainty_selections), "final_weight")
+
     
     # Variance estimation using martingale method. ----
     X <- t(t(totals[1:i,, drop = FALSE]) - t_y)
@@ -538,6 +559,7 @@ active_sampling <- function(data,
     ix <- rep(1:nrow(labelled), labelled$nhits) # To repeat rows.
     crashes <- labelled[ix, ] %>%
       mutate(final_weight = eoff_acc_prob * batch_weight * sampling_weight) %>%
+      add_row(certainty_selections) %>% 
       filter(impact_speed0 > 0 & final_weight > 0)
     
     # If any crashes have been generated.
@@ -593,8 +615,7 @@ active_sampling <- function(data,
                  neff_tot = n_seq0[i] + n_seq1[i],
                  nsim0 = ifelse(use_logic, sum(labelled$sim_count0), sum(labelled$sim_count0 * labelled$nhits)), 
                  nsim1 = ifelse(use_logic, sum(labelled$sim_count1), sum(labelled$sim_count1 * labelled$nhits))) %>%
-      mutate(nsim_tot = nsim0 + nsim1,
-             n_crashes = nrow(crashes)) %>% 
+      mutate(nsim_tot = nsim0 + nsim1) %>% 
       add_column(as_tibble(as.list(est))) %>% # Estimates.
       add_column(as_tibble(as.list(sqerr))) %>% # Squared errors.
       add_column(as_tibble(as.list(se_mart)))  %>% # Standard errors.

@@ -7,18 +7,18 @@ set.seed(123)
 par(mfrow = c(1, 3))
 cat("\14")
 
-# data <- df
-# sampling_method <- "active sampling"
-# proposal_dist <- "NA"
-# target <- "impact speed reduction"
-# opt_method <- "naive"
-# use_logic <- FALSE
-# batch_size <- 100
-# niter <- 5
-# verbose <- TRUE
-# plot <- FALSE
-# nboot <-  100
-# i <- 1
+data <- df
+sampling_method <- "active sampling"
+proposal_dist <- "NA"
+target <- "impact speed reduction"
+opt_method <- "naive"
+use_logic <- FALSE
+batch_size <- 100
+niter <- 5
+verbose <- TRUE
+plot <- FALSE
+nboot <-  100
+i <- 1
 
 # df$eoff_acc_prob <- 1
 
@@ -26,12 +26,12 @@ for (i in 1:1) {
   tic()
   print(sprintf("%d", i))
   res <- active_sampling(df, 
-                         sampling_method = "simple", 
+                         sampling_method = "active", 
                          proposal_dist = "NA",
-                         target = "NA", 
+                         target = "impact", 
                          use_logic = TRUE,
-                         batch_size = 2, 
-                         niter = 20, 
+                         batch_size = 100, 
+                         niter = 3, 
                          verbose = TRUE, 
                          plot = FALSE, 
                          nboot = 0)
