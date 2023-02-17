@@ -89,10 +89,13 @@ calculate_sampling_scheme <- function(unlabelled,
     size <- unlabelled$eoff_acc_prob
   }
   
-  # Probability proportional to size.
-  sampling_probability <- size / sum(size)
-  
-  
+  # Within each case: sampling probability proportional to size.
+  sampling_probability <- rep(NA, nrow(unlabelled))
+  for ( id in unique(unlabelled$caseID) ) {
+    ix <- which(unlabelled$caseID == id)  
+    sampling_probability[ix] <- size[ix] / sum(size[ix])
+  }
+
   # Return.
   return(list(size = size, sampling_probability = sampling_probability))
   

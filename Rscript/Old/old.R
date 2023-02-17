@@ -1,3 +1,95 @@
+
+# Update case weights.
+inc_w <- new_sample %>% 
+  add_row(certainty_selections) %>% 
+  mutate(w = eoff_acc_prob * nhits * sampling_weight * (impact_speed0 > 0)) %>% 
+  group_by(caseID) %>% 
+  summarise(w = sum(w), .groups = "keep") %>% 
+  pull(w)
+
+sum_w <- rewt * sum_w + bwt * inc_w
+case_weight <- 1 / sum_w
+case_weight[is.infinite(case_weight)] <- 0
+df_case_wt <- tibble(case = 1:n_cases, case_weight = case_weight)
+
+
+# If bootstrap is used: run every 10th/25th/50th/100th new observation, etc. 
+# Find corresponding iterations.
+if ( nboot > 0 & niter * batch_size >= 10) {
+  
+  n_update <- c(seq(10, 50, 10), seq(75, 200, 25), seq(250, 500, 50), seq(600, 1000, 100), seq(1250, 2500, 250), seq(3000, 5000, 500), seq(6000, 10000, 1000))
+  boot_update_iterations <- vapply(1:length(n_update), function(ix) which(c(n_seq, max(n_seq) + 1) >= n_update[ix] & c(0, n_seq) >= n_update[ix])[1] - 1, FUN.VALUE = numeric(1))
+  boot_update_iterations <- unique(as.numeric(na.omit(boot_update_iterations)))
+  
+  if ( verbose & length(n_update) > 0 ) {
+    print(sprintf("Bootstrap standard error updated at iterations %s", paste(boot_update_iterations, collapse = ", ")))
+    print(sprintf("after %s observations", paste(n_seq[boot_update_iterations], collapse = ", ")))
+    cat("\n")
+  } 
+} else {
+  boot_update_iterations <- NA
+}
+
+
+# Variance estimation using classical survey sampling method (Sen-Yates-Grundy estimator). ----
+Y <- new_sample %>% 
+  mutate(baseline_crash = impact_speed0 > 0) %>% 
+  dplyr::select(impact_speed_reduction, injury_risk_reduction, crash_avoidance, baseline_crash) %>%
+  as.matrix()
+n <- batch_size
+X <- with(new_sample, t((t(eoff_acc_prob * Y / mu) - totals[i, ] / n)))
+W <- with(new_sample, diag(nhits, nrow = nrow(X), ncol = nrow(X)))
+
+covest_classic <- rewt^2 * covest_classic + bwt^2 * n / (n - 1) * t(X) %*% W %*% X 
+
+G <- matrix(data = c(1 / t_y[4], 0, 0,-t_y[1] / t_y[4]^2,
+                     0, 1 / t_y[4], 0,-t_y[2] / t_y[4]^2,
+                     0, 0, 1 / t_y[4],-t_y[3] / t_y[4]^2), 
+            byrow = FALSE, nrow = 4, ncol = 3)
+
+se_classic <- sqrt(diag(t(G) %*% covest_classic %*% G))
+
+
+# Variance estimation using bootstrap method. ----
+
+# If an element is selected multiple times: split into multiple observations/rows.
+ix <- rep(1:nrow(labelled), labelled$nhits) # To repeat rows.
+crashes <- labelled[ix, ] %>%
+  mutate(final_weight = eoff_acc_prob * batch_weight * sampling_weight) %>%
+  add_row(certainty_selections) %>% 
+  filter(impact_speed0 > 0 & final_weight > 0)
+
+# If any crashes have been generated.
+# Run bootstrap at selected iterations (every 10th new observation).
+if ( nrow(crashes) > 0 & i %in% boot_update_iterations ) { 
+  boot <- boot(crashes, 
+               statistic = function(data, ix) estimate_targets(data[ix, ], weightvar = "final_weight"), 
+               R = nboot) 
+  se_boot <- apply(boot$t, 2 , sd) # Standard error of estimates.
+}  
+
+
+lower_classic <- est - qnorm(0.975) * se_classic 
+upper_classic <- est + qnorm(0.975) * se_classic
+lower_boot <- est - qnorm(0.975) * se_boot 
+upper_boot <- est + qnorm(0.975) * se_boot
+cov_classic <- as.numeric(lower_classic < ground_truth & ground_truth < upper_classic)
+cov_boot <- as.numeric(lower_boot < ground_truth & ground_truth < upper_boot)
+
+covest_classic <- matrix(0, nrow = 4, ncol = 4) # To store covariance matrix estimates per iteration.
+se_boot <- rep(NA, 3)# To store bootstrap standard error.
+
+
+ground_truth <- estimate_targets(data, weightvar = "eoff_acc_prob") # Calculate target quantities on full data.
+
+data %>% 
+  group_by(caseID) %>% 
+  summarise(mean = sum(crash_avoidance * (impact_speed0 > 0) * eoff_acc_prob) / sum( (impact_speed0 > 0) * eoff_acc_prob), .groups = "keep") %>% 
+  pull() %>% mean()
+
+
+
+
 sum <- matrix(0, nrow = 4, ncol = 4)
 Sigma_kl <- n * ( diag(new_sample$pi) - tcrossprod((new_sample$pi)) )
 mu_kl <- Sigma_kl + tcrossprod(new_sample$mu)

@@ -7,18 +7,17 @@ set.seed(123)
 par(mfrow = c(1, 3))
 cat("\14")
 
-data <- df
-sampling_method <- "active sampling"
-proposal_dist <- "NA"
-target <- "impact speed reduction"
-opt_method <- "naive"
-use_logic <- FALSE
-batch_size <- 100
-niter <- 5
-verbose <- TRUE
-plot <- FALSE
-nboot <-  100
-i <- 1
+# data <- df
+# sampling_method <- "importance sampling"
+# proposal_dist <- "density sampling"
+# target <- "NA"
+# use_logic <- FALSE
+# n_per_case <- 10
+# niter <- 5
+# verbose <- TRUE
+# plot <- FALSE
+# i <- 1
+# nboot <- 200
 
 # df$eoff_acc_prob <- 1
 
@@ -30,10 +29,10 @@ for (i in 1:1) {
                          proposal_dist = "NA",
                          target = "impact", 
                          use_logic = TRUE,
-                         batch_size = 100, 
-                         niter = 3, 
+                         n_per_case = 1, 
+                         niter = 10, 
                          verbose = TRUE, 
-                         plot = FALSE, 
-                         nboot = 0)
+                         plot = FALSE)
   toc()
 }
+

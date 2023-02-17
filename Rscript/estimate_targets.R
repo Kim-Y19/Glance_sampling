@@ -1,10 +1,20 @@
 estimate_targets <- function(data, weightvar = NULL) {
   
-  data$w <- data[, weightvar]
+  if ( !is.null(weightvar) ) {
 
-  mean_impact_speed_reduction <- with(data, sum( w * (impact_speed0 > 0) * (impact_speed_reduction) ) / sum (w * (impact_speed0 > 0)) )
-  mean_injury_risk_reduction <- with(data, sum( w * (impact_speed0 > 0) * (injury_risk_reduction) ) / sum( w * (impact_speed0 > 0)) )
-  crash_avoidance_rate <- 1 - with(data, sum( w * (impact_speed0 > 0) * (impact_speed1 > 0) ) / sum( w * (impact_speed0 > 0)) )
+    data$w <- unlist(data[, weightvar])
+    
+    denom <- with(data, tapply(w * (impact_speed0 > 0), caseID, sum))
+    mean_impact_speed_reduction <- mean(with(data, tapply(w * (impact_speed0 > 0) * (impact_speed_reduction), caseID, sum)) / denom)
+    mean_injury_risk_reduction <- mean(with(data, tapply(w * (impact_speed0 > 0) * (injury_risk_reduction), caseID, sum)) / denom)
+    crash_avoidance_rate <- mean(1 - with(data, tapply(w * (impact_speed0 > 0) * (impact_speed1 > 0), caseID, sum)) / denom)
+
+  } else {
+    
+    mean_impact_speed_reduction <- mean_injury_risk_reduction <- crash_avoidance_rate <- NA
+    
+  }
+  
 
   return(c("mean_impact_speed_reduction" = mean_impact_speed_reduction, 
            "mean_injury_risk_reduction" = mean_injury_risk_reduction, 

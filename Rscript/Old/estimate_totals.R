@@ -1,7 +1,7 @@
 estimate_totals <- function(data, weightvar = NULL) {
   
-  data$w <- data[, weightvar]
-  
+  data$w <- unlist(data[, weightvar])
+ 
   total_impact_speed_reduction <- with(data, sum( w * impact_speed_reduction) ) 
   total_injury_risk_reduction <- with(data, sum( w * injury_risk_reduction) ) 
   total_crash_avoidance <- with(data, sum( w * crash_avoidance ) ) 

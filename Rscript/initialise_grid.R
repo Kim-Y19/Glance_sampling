@@ -5,7 +5,7 @@ initialise_grid <- function(data, grid) {
     right_join(grid, by = c("eoff", "acc")) %>%
     mutate(sim_count0 = 1, 
            sim_count1 = 1, 
-           iter = 1,
+           iter = 0,
            batch_size = 0,
            batch_weight = 1,
            pi = 1,
