@@ -7,7 +7,7 @@ update_predictions <- function(labelled,
                                verbose = FALSE, 
                                plot = FALSE,
                                iter = NA) {
-
+  
   # Check input parameters.
   target <- match.arg(target)
   
@@ -63,7 +63,7 @@ update_predictions <- function(labelled,
     
   } # End !is.null(rf).
   
- 
+  
   # Predict impact speed reduction ----
   if ( target == "impact speed reduction" ) {
     
@@ -79,7 +79,7 @@ update_predictions <- function(labelled,
                                                     number = 5))
     options(warn = defaultW)
     
-    if ( !is.null(rf) && rf$finalModel$r.squared > 0 ) { # For successfully fitted model: calculate predictions.
+    if (!is.null(rf) && rf$finalModel$r.squared > 0 && !is.na(rf$finalModel$r.squared)) { # For successfully fitted model: calculate predictions.
       
       # Prediction on labelled and unlabelled data.
       xhat_train <- predict(rf, crashes)
@@ -123,7 +123,7 @@ update_predictions <- function(labelled,
                                                     number = 5))
     options(warn = defaultW)
     
-    if ( !is.null(rf) && rf$finalModel$r.squared > 0 ) { # For successfully fitted model: calculate predictions.
+    if (!is.null(rf) && rf$finalModel$r.squared > 0 && !is.na(rf$finalModel$r.squared)) { # For successfully fitted model: calculate predictions.
       
       # Prediction on labelled and unlabelled data.
       yhat_train <- predict(rf, crashes)
@@ -170,7 +170,7 @@ update_predictions <- function(labelled,
     if ( !is.null(rf) ) {
       ix <- with(rf$results, which(min.node.size == rf$finalModel$min.node.size & mtry == rf$finalModel$mtry))
     }
-    if ( !is.null(rf) && rf$results[ix, "Accuracy"] > 0 ) { # For successfully fitted model: calculate predictions.
+    if ( !is.null(rf) && rf$results[ix, "Accuracy"] > 0 && !is.na(rf$results[ix, "Accuracy"] > 0)) { # For successfully fitted model: calculate predictions.
       
       # Prediction on labelled and unlabelled data.
       p1_train <- predict(rf, crashes, type = "prob")$Y1
@@ -182,7 +182,7 @@ update_predictions <- function(labelled,
       # Accuracy.
       ix <- with(rf$results, which(min.node.size == rf$finalModel$min.node.size & mtry == rf$finalModel$mtry))
       p1_acc <- rf$results[ix, "Accuracy"]
-
+      
     } else { # If unable to fit model: set to constant.
       
       p1_train <- 0
@@ -247,8 +247,8 @@ Counter-meature crash probability = %.2f.
              collision_prob1 = p1_test,
              impact_speed_reduction_pred = xhat_test,
              injury_risk_reduction_pred = yhat_test) %>% 
-    filter(caseID <= 42) # Plot 42 cases on 7x6 grid. 
-
+      filter(caseID <= 42) # Plot 42 cases on 7x6 grid. 
+    
     
     # Baseline collision probability.
     
@@ -344,7 +344,7 @@ Counter-meature crash probability = %.2f.
       
       filename <- sprintf("Output/ImpactSpeedReduction_Pred_2D_Iter%d.png", iter)
       ggsave(filename, width = 160, height = 100, unit = "mm", dpi = 1000)
-
+      
     }
     
     
@@ -446,9 +446,9 @@ Counter-meature crash probability = %.2f.
       
       filename <- sprintf("Output/CountermeasureCollisionProbability_2D_Iter%d.png", iter)
       ggsave(filename, width = 160, height = 100, unit = "mm", dpi = 1000)
-
+      
     }
-
+    
   } # End plot.
   
   # Return.
