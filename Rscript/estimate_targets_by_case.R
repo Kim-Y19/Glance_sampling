@@ -15,7 +15,7 @@ estimate_targets_by_case <- function(data, weightvar = NULL) {
     
   }
   
-  return(tibble(caseID = as.numeric(names(denom)),
+  return(tibble(caseID = as.character(names(denom)),
                 mean_impact_speed_reduction = mean_impact_speed_reduction,
                 mean_injury_risk_reduction = mean_injury_risk_reduction, 
                 mean_crash_avoidance = mean_crash_avoidance))
