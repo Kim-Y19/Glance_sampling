@@ -6,11 +6,11 @@ source("Rscript/sim_output.R")
 load("Data/glance_dec_data_ttc_AEB_1_25_ttc.R")
 sampling_input <- read_excel("Data/Sampling_input_application1.xlsx")
 param_input <- read_excel("Data/param_input.xlsx")
-add_effn = 2000
+add_effn = 5000
 nburnin = 0
 verbose = FALSE
 
-niter = ceiling(add_effn/param_input$batch_size)
+niter = ceiling(add_effn/param_input$batch_size/44)
 res_total= replicate(length(param_input$Sim_n), data.frame())
 
 for(j in 1:length(param_input$Sim_n)){
@@ -27,5 +27,5 @@ for(j in 1:length(param_input$Sim_n)){
   res_total[[j]] <- res_top_loop
 }  
 
-save(res_total, file = "Data/New_sim_results210.R")
+save(res_total, file = "Data/New_sim_results290.R")
 
