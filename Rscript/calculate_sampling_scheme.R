@@ -41,46 +41,30 @@ calculate_sampling_scheme <- function(unlabelled,
     } 
     
   } else if ( sampling_method == "active sampling" ) {
-    
-    # Baseline crash probability.
-    # If prediction accuracy is missing or negative: set all equal.
-    if ( is.na(r2$accuracy_crash0) | r2$accuracy_crash0 < 0 ) {  
-      collision_prob0_pred <- 1
-    } else {
-      collision_prob0_pred <- unlabelled$collision_prob0_pred
-    }
 
     if ( target == "impact speed reduction" ) {
       
-      r2 <- r2$impact_speed_reduction
-      mu <- est$mean_impact_speed_reduction
-      pred <- unlabelled$impact_speed_reduction_pred
+      mu <- unlabelled$mean_impact_speed_reduction
+      pred <- unlabelled$pred_impact_speed_reduction
       sigma <- unlabelled$sigma_impact_speed_reduction
 
     } else if ( target == "injury risk reduction" ) {
       
-      r2 <- r2$injury_risk_reduction
-      mu <- est$mean_injury_risk_reduction
-      pred <- unlabelled$injury_risk_reduction_pred
+      mu <- unlabelled$mean_injury_risk_reduction
+      pred <- unlabelled$pred_injury_risk_reduction
       sigma <- unlabelled$sigma_injury_risk_reduction
       
     } else if ( target == "crash avoidance" ) {
       
-      r2 <- r2$accuracy_crash1
-      mu <- 1 - est$crash_avoidance_rate
-      pred <- unlabelled$collision_prob1_pred
+      mu <- 1 - unlabelled$mean_crash_avoidance
+      pred <- unlabelled$pred_collision1
       sigma <- unlabelled$sigma_collision1
       
     } 
-  
-    # If prediction R-squared/accuracy is missing or negative: set all equal.
-    if ( is.na(r2) | r2 < 0 ) {
-      mu <- 0
-      pred <- 1
-      sigma <- 0
-    }
-
-    size <- unlabelled$eoff_acc_prob * sqrt(collision_prob0_pred * ((pred - mu)^2 + sigma^2))
+     
+    p <- unlabelled$eoff_acc_prob
+    q <- unlabelled$pred_collision0
+    size <- p * sqrt(q * ((pred - mu)^2 + sigma^2))
 
   } 
   

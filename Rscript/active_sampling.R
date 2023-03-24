@@ -122,6 +122,7 @@ active_sampling <- function(data,
   # Load helper functions. ----
   source("Rscript/calculate_sampling_scheme.R")
   source("Rscript/estimate_targets.R")
+  source("Rscript/estimate_targets_by_case.R")
   source("Rscript/find_crashes.R")
   source("Rscript/find_max_impact_crashes.R")
   source("Rscript/find_non_crashes.R")
@@ -141,16 +142,18 @@ active_sampling <- function(data,
   # For optimised sampling:
   # Prediction models will be updated n_update observations have been collected.
   # Find corresponding iteration indices model_update_iterations.
-  if ( sampling_method == "active sampling" & niter * batch_size >= 10 ) {
+  if ( sampling_method == "active sampling" & niter * n_per_case >= 5 ) {
     
-    n_update <- c(seq(n_cases, 100, n_cases), seq(125, 500, n_cases * 2), seq(550, 1000, n_cases * 3), seq(1100, 2000, n_cases * 4), seq(2200, 5000, n_cases * 5), seq(5500, 10000, n_cases * 6))
-    model_update_iterations <- vapply(1:length(n_update), function(ix) which(c(nseq, 0) > n_update[ix] & c(0, nseq) > n_update[ix])[1] - 1, FUN.VALUE = numeric(1))
+    nind_seq <- cumsum(rep(n_per_case, niter)) 
+    n_update <- c(seq(5, 1e6, 5))
+    model_update_iterations <- vapply(1:length(n_update), function(ix) which(c(nind_seq, 0) > n_update[ix] & c(0, nind_seq) > n_update[ix])[1] - 1, FUN.VALUE = numeric(1))
     model_update_iterations <- as.numeric(na.omit(model_update_iterations))
     model_update_iterations <- unique(model_update_iterations[model_update_iterations > 1])
     
     if ( verbose ) {
       print(sprintf("Predictions updated at iterations %s", paste(model_update_iterations, collapse = ", ")))
-      print(sprintf("after %s observations", paste(nseq[model_update_iterations - 1], collapse = ", ")))
+      print(sprintf("after %s observations per subject", paste(nind_seq[model_update_iterations - 1], collapse = ", ")))
+      print(sprintf("and %s observations in total.", paste(nseq[model_update_iterations - 1], collapse = ", ")))
       cat("\n")
     }
     
@@ -318,57 +321,40 @@ active_sampling <- function(data,
       
       if ( verbose ) { print("Update predictions.") }
       
-      # Calculated predictions.
-      pred <- update_predictions(labelled, unlabelled, target, use_logic, plot = plot & i %in% plot_iter, iter = i) 
+      for ( ix in unique(data$caseID) ) { # Iterate over cases.
+        
+        # Update predictions.
+        pred <- update_predictions(labelled[labelled$caseID == ix, ], 
+                                   unlabelled[unlabelled$caseID == ix, ], 
+                                   target, use_logic, plot = plot & i %in% plot_iter, iter = i) 
+        
+        unlabelled[unlabelled$caseID == ix, names(pred)] <- pred
+        
+      }
       
-      # Prediction R-squares and accuracies.
-      r2 <- list(impact_speed0 = pred$r2_impact_speed0,
-                 impact_speed_reduction = pred$r2_impact_speed_reduction,
-                 injury_risk_reduction = pred$r2_injury_risk_reduction,
-                 accuracy_crash0 = pred$accuracy_crash0,
-                 accuracy_crash1 = pred$accuracy_crash1)
+      # Estimate targets, by case.
+      est_by_case <- estimate_targets_by_case(labelled %>% 
+                                              add_row(certainty_selections) %>% 
+                                              filter(impact_speed0 > 0 & final_weight > 0), "final_weight")
       
-      # Add to unlabelled dataset.
+      # Add un unlabelled set.
       unlabelled %<>% 
-        mutate(collision_prob0_pred = pred$collision_prob0,
-               collision_prob1_pred = pred$collision_prob1,
-               impact_speed0_pred = pred$impact_speed0_pred, 
-               impact_speed_reduction_pred = pred$impact_speed_reduction_pred,
-               injury_risk_reduction_pred = pred$injury_risk_reduction_pred,
-               sigma_impact_speed_reduction = pred$rmse_impact_speed_reduction,
-               sigma_injury_risk_reduction = pred$rmse_injury_risk_reduction,
-               sigma_collision1 = sqrt(collision_prob1_pred * (1 - collision_prob1_pred)))
+        dplyr::select(-contains("mean")) %>% 
+        left_join(est_by_case, by = "caseID") %>% 
+        mutate(mean_impact_speed_reduction = ifelse(is.na(mean_impact_speed_reduction), 0, mean_impact_speed_reduction),
+               mean_injury_risk_reduction = ifelse(is.na(mean_injury_risk_reduction), 0, mean_injury_risk_reduction),
+               mean_crash_avoidance = ifelse(is.na(mean_crash_avoidance), 0, mean_crash_avoidance))
       
     }  # End update predictions.
     
     
     # Calculate sampling probabilities. ----
-    
-    # Set R-squares to NA if sampling method is not equal to "active sampling" 
-    # or if prediction models for optimised sampling has not (yet) been fitted.
-    if ( sampling_method != "active sampling" | !exists("pred") ) {
-      r2 <- list(impact_speed0 = NA_real_,
-                 impact_speed_reduction = NA_real_,
-                 injury_risk_reduction = NA_real_,
-                 accuracy_crash0 = NA_real_,
-                 accuracy_crash1 = NA_real_)
-    }  
-    
-    
-    # Sets estimates to NA if target quantities have not (yet) been estimated.
-    if ( !exists("est") ) {
-      est <- estimate_targets(labelled)
-    }
-    
-    # Calculate sampling scheme.
+
     prob <- calculate_sampling_scheme(unlabelled, 
                                       labelled, 
                                       sampling_method, 
                                       proposal_dist, 
-                                      target,
-                                      est = as.list(est),
-                                      r2 = r2)
-   
+                                      target)
     
     # Plot. ----
     if ( sampling_method == "active sampling" & plot & i %in% c(1, plot_iter) ) {
@@ -486,7 +472,7 @@ active_sampling <- function(data,
     est <- estimate_targets(labelled %>% 
                               add_row(certainty_selections) %>% 
                               filter(impact_speed0 > 0 & final_weight > 0), "final_weight")
-
+    
     
     # Variance estimation using bootstrap method. 
     # If an element is selected multiple times: split into multiple observations/rows.
@@ -516,16 +502,12 @@ active_sampling <- function(data,
     
     # Squared error from ground truth. 
     sqerr <- (est - ground_truth)^2 
-    
-    # Prediction R-squares.
-    r2_tbl <- as_tibble(r2)
-    
+ 
     # Add names.
     names(se) <- paste0(names(est), "_se")
     names(CI_cover) <- paste0(names(est), "_ci_cover")
     names(sqerr) <- paste0(names(est), "_sqerr")
-    names(r2_tbl) <- c("r2_impact_speed0", "r2_impact_speed_reduction", "r2_injury_risk_reduction", "accuracy_crash0", "accuracy_crash1")
-    
+
     newres <- tibble(sampling_method = sampling_method, # Meta-information.
                      proposal_dist = proposal_dist,
                      target = target,
@@ -541,9 +523,8 @@ active_sampling <- function(data,
       add_column(as_tibble(as.list(est))) %>% # Estimates.
       add_column(as_tibble(as.list(sqerr))) %>% # Squared errors.
       add_column(as_tibble(as.list(se)))  %>% # Standard errors.
-      add_column(as_tibble(as.list(CI_cover))) %>% # Confidence interval coverage.
-      add_column(r2_tbl) # Prediction R-squared and accuracy.
-    
+      add_column(as_tibble(as.list(CI_cover)))# Confidence interval coverage.
+
     
     if ( is.null(res) ) {
       res <- newres

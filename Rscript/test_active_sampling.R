@@ -12,7 +12,7 @@ cat("\14")
 # proposal_dist <- "density sampling"
 # target <- "NA"
 # use_logic <- FALSE
-# n_per_case <- 10
+# n_per_case <- 1
 # niter <- 5
 # verbose <- TRUE
 # plot <- FALSE
@@ -27,7 +27,7 @@ for (i in 1:1) {
   res <- active_sampling(df, 
                          sampling_method = "active", 
                          proposal_dist = "NA",
-                         target = "impact", 
+                         target = "crash", 
                          use_logic = TRUE,
                          n_per_case = 1, 
                          niter = 10, 
