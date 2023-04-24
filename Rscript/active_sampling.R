@@ -145,7 +145,7 @@ active_sampling <- function(data,
   if ( sampling_method == "active sampling" & niter * n_per_case >= 5 ) {
     
     nind_seq <- cumsum(rep(n_per_case, niter)) 
-    n_update <- c(seq(5, 1e6, 5))
+    n_update <- c(seq(10, 1e6, 5))
     model_update_iterations <- vapply(1:length(n_update), function(ix) which(c(nind_seq, 0) > n_update[ix] & c(0, nind_seq) > n_update[ix])[1] - 1, FUN.VALUE = numeric(1))
     model_update_iterations <- as.numeric(na.omit(model_update_iterations))
     model_update_iterations <- unique(model_update_iterations[model_update_iterations > 1])
@@ -236,19 +236,10 @@ active_sampling <- function(data,
   unlabelled <- init$unlabelled 
  
   # Update simulation counts for initialisation.
-  n_init <- 0
-  if ( sampling_method == "active sampling" ) {
-   
-    # Remove labelled observations from unlabelled set.
-    unlabelled %<>% 
-      left_join(grid %>% mutate(exclude = 1), by = c("eoff", "acc")) %>% 
-      filter(is.na(exclude))
-    
-  } else if ( sampling_method == "importance sampling" & proposal_dist == "severity sampling" ) {
-    
-    # One simulation per case needed for initialisation.
-    n_init <- nrow(labelled) 
-    
+  if ( use_logic | sampling_method == "active sampling" | (sampling_method == "importance sampling" & proposal_dist == "severity sampling") ) {
+    n_init <- nrow(labelled)
+  } else {
+    n_init <- 0
   } 
 
   # If use_logic = TRUE: reduce simulation counts using logic.
@@ -258,10 +249,6 @@ active_sampling <- function(data,
     unlabelled %<>% 
       mutate(sim_count1 = ifelse(impact_speed0 > 0, 1, 0))
     
-    # One simulation per case needed for initialisation.
-    # Don't count for active sampling since already counted in labelled set.
-    n_init <- nrow(labelled)  * (sampling_method != "active sampling") 
-
   }
   
   # If no initialisation: start with empty sample.
@@ -269,8 +256,8 @@ active_sampling <- function(data,
     labelled %<>% filter(1 == 0)
   }
 
-  nseq0 <- nseq + n_init + sum(labelled$sim_count0)
-  nseq1 <- nseq + sum(labelled$sim_count1)
+  nseq0 <- nseq + n_init
+  nseq1 <- nseq + n_init * (sampling_method == "active sampling")
 
   
   # Iterate. ----
@@ -438,8 +425,8 @@ active_sampling <- function(data,
     
  
     # Certainty selections.(Select already labelled instances with probability 1).
-    # Only after first iteration (unless method = "active sampling"), otherwise set to empty set.
-    if ( i >  1 | sampling_method == "active sampling" ) {
+    # Only after first iteration, otherwise set to empty set.
+    if ( i >  1 ) {
       certainty_selections <- labelled %>% 
         dplyr::select(-sim_count0, -sim_count1, -batch_size, -nhits, -pi, -mu, -sampling_weight, -batch_weight, -final_weight) %>% 
         mutate(nhits = 1,
@@ -539,4 +526,5 @@ active_sampling <- function(data,
               labelled = labelled, 
               crashes = labelled %>% filter(impact_speed0 > 0)))
   
-}
+  }
+  

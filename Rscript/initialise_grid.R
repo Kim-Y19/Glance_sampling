@@ -3,15 +3,15 @@ initialise_grid <- function(data, grid) {
   # Labelled dataset.
   labelled <- data %>% 
     right_join(grid, by = c("eoff", "acc")) %>%
-    mutate(sim_count0 = 1, 
-           sim_count1 = 1, 
+    mutate(sim_count0 = 0, 
+           sim_count1 = 0, 
            iter = 0,
            batch_size = 0,
-           batch_weight = 1,
-           pi = 1,
-           mu = 1,
-           nhits = 1,
-           sampling_weight = 1,
+           batch_weight = 0,
+           pi = 0,
+           mu = 0,
+           nhits = 0,
+           sampling_weight = 0,
            final_weight = eoff_acc_prob * nhits * sampling_weight)
   
   

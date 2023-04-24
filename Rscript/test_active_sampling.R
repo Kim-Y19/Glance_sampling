@@ -8,12 +8,12 @@ par(mfrow = c(1, 3))
 cat("\14")
 
 # data <- df
-# sampling_method <- "importance sampling"
-# proposal_dist <- "density sampling"
-# target <- "NA"
+# sampling_method <- "active sampling"
+# proposal_dist <- "NA"
+# target <- "baseline impact speed"
 # use_logic <- FALSE
 # n_per_case <- 1
-# niter <- 5
+# niter <- 20
 # verbose <- TRUE
 # plot <- FALSE
 # i <- 1
@@ -25,14 +25,13 @@ for (i in 1:1) {
   tic()
   print(sprintf("%d", i))
   res <- active_sampling(df, 
-                         sampling_method = "active", 
-                         proposal_dist = "NA",
-                         target = "crash", 
-                         use_logic = TRUE,
+                         sampling_method = "importance", 
+                         proposal_dist = "severity",
+                         target = "NA", 
+                         use_logic = FALSE,
                          n_per_case = 1, 
                          niter = 10, 
                          verbose = TRUE, 
                          plot = FALSE)
   toc()
 }
-
