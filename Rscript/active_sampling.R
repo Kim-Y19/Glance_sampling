@@ -1,5 +1,3 @@
-
-
 ################################################################################
 #
 # active_sampling.R
@@ -23,7 +21,7 @@
 # use_logic:  Use logical constraints (TRUE or FALSE) to infer regions with certainty outcomes 
 #             (no crash or maximal impact speed collision) and avoid sampling in those regions.
 #
-# n_per_case: number of obserations to sample per case and iteration. 
+# n_per_case: number of observations to sample per case and iteration. 
 #
 # niter: number of iterations.
 #
@@ -244,11 +242,8 @@ active_sampling <- function(data,
 
   # If use_logic = TRUE: reduce simulation counts using logic.
   if ( use_logic ) {
-    
-    # Reduce simulation counts using logic.
     unlabelled %<>% 
       mutate(sim_count1 = ifelse(impact_speed0 > 0, 1, 0))
-    
   }
   
   # If no initialisation: start with empty sample.
@@ -343,6 +338,16 @@ active_sampling <- function(data,
                                       proposal_dist, 
                                       target)
     
+    prob_is <- calculate_sampling_scheme(unlabelled, 
+                                         labelled, 
+                                         sampling_method = "importance sampling", 
+                                         proposal_dist = "density sampling", 
+                                         target)
+    
+    print(cor(prob$sampling_probability, prob_is$sampling_probability))
+    plot(prob$sampling_probability, prob_is$sampling_probability, bty = "l")
+    abline(0, 1)
+    
     # Plot. ----
     if ( sampling_method == "active sampling" & plot & i %in% c(1, plot_iter) ) {
       
@@ -429,6 +434,7 @@ active_sampling <- function(data,
     if ( i >  1 ) {
       certainty_selections <- labelled %>% 
         dplyr::select(-sim_count0, -sim_count1, -batch_size, -nhits, -pi, -mu, -sampling_weight, -batch_weight, -final_weight) %>% 
+        filter(iter > 0) %>% 
         mutate(nhits = 1,
                pi = 1,
                mu = 1,
