@@ -318,14 +318,22 @@ active_sampling <- function(data,
       est_by_case <- estimate_targets_by_case(labelled %>% 
                                               add_row(certainty_selections) %>% 
                                               filter(impact_speed0 > 0 & final_weight > 0), "final_weight")
-      
-      # Add un unlabelled set.
+
+      # Add to unlabelled set.
+      # unlabelled %<>% 
+      #   dplyr::select(-contains("mean")) %>% 
+      #   left_join(est_by_case, by = "caseID") %>% 
+      #   mutate(mean_impact_speed_reduction = ifelse(is.na(mean_impact_speed_reduction), 0, mean_impact_speed_reduction),
+      #          mean_injury_risk_reduction = ifelse(is.na(mean_injury_risk_reduction), 0, mean_injury_risk_reduction),
+      #          mean_crash_avoidance = ifelse(is.na(mean_crash_avoidance), 0, mean_crash_avoidance))
+
+      # Add to unlabelled set.
       unlabelled %<>% 
         dplyr::select(-contains("mean")) %>% 
         left_join(est_by_case, by = "caseID") %>% 
-        mutate(mean_impact_speed_reduction = ifelse(is.na(mean_impact_speed_reduction), 0, mean_impact_speed_reduction),
-               mean_injury_risk_reduction = ifelse(is.na(mean_injury_risk_reduction), 0, mean_injury_risk_reduction),
-               mean_crash_avoidance = ifelse(is.na(mean_crash_avoidance), 0, mean_crash_avoidance))
+        mutate(mean_impact_speed_reduction = 0,
+               mean_injury_risk_reduction = 0,
+               mean_crash_avoidance = 0)
       
     }  # End update predictions.
     
@@ -337,16 +345,6 @@ active_sampling <- function(data,
                                       sampling_method, 
                                       proposal_dist, 
                                       target)
-    
-    prob_is <- calculate_sampling_scheme(unlabelled, 
-                                         labelled, 
-                                         sampling_method = "importance sampling", 
-                                         proposal_dist = "density sampling", 
-                                         target)
-    
-    print(cor(prob$sampling_probability, prob_is$sampling_probability))
-    plot(prob$sampling_probability, prob_is$sampling_probability, bty = "l")
-    abline(0, 1)
     
     # Plot. ----
     if ( sampling_method == "active sampling" & plot & i %in% c(1, plot_iter) ) {

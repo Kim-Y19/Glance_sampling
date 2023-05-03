@@ -63,7 +63,7 @@ calculate_sampling_scheme <- function(unlabelled,
     } 
      
     p <- unlabelled$eoff_acc_prob
-    q <- unlabelled$pred_collision0
+    q <- 1 # unlabelled$pred_collision0
     size <- p * sqrt(q * ((pred - mu)^2 + sigma^2))
 
   } 

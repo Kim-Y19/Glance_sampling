@@ -7,7 +7,9 @@ set.seed(123)
 par(mfrow = c(1, 3))
 cat("\14")
 
-df %<>% 
+library(tidyverse)
+
+df <- df %>% 
   mutate(caseID = as.character(caseID))
 # data <- df
 # sampling_method <- "active sampling"
