@@ -140,18 +140,16 @@ active_sampling <- function(data,
   # For optimised sampling:
   # Prediction models will be updated n_update observations have been collected.
   # Find corresponding iteration indices model_update_iterations.
-  if ( sampling_method == "active sampling" & niter * n_per_case >= 5 ) {
+  # For optimised sampling:
+  # Prediction models will be updated n_update observations have been collected.
+  # Find corresponding iteration indices model_update_iterations.
+  if ( sampling_method == "active sampling" & niter > 5 ) {
     
-    nind_seq <- cumsum(rep(n_per_case, niter)) 
-    n_update <- c(seq(10, 1e6, 5))
-    model_update_iterations <- vapply(1:length(n_update), function(ix) which(c(nind_seq, 0) > n_update[ix] & c(0, nind_seq) > n_update[ix])[1] - 1, FUN.VALUE = numeric(1))
-    model_update_iterations <- as.numeric(na.omit(model_update_iterations))
-    model_update_iterations <- unique(model_update_iterations[model_update_iterations > 1])
+    model_update_iterations <- seq(6, niter)
     
     if ( verbose ) {
       print(sprintf("Predictions updated at iterations %s", paste(model_update_iterations, collapse = ", ")))
-      print(sprintf("after %s observations per subject", paste(nind_seq[model_update_iterations - 1], collapse = ", ")))
-      print(sprintf("and %s observations in total.", paste(nseq[model_update_iterations - 1], collapse = ", ")))
+      print(sprintf("after %s observations.", paste(nseq[model_update_iterations - 1], collapse = ", ")))
       cat("\n")
     }
     
@@ -303,43 +301,61 @@ active_sampling <- function(data,
       
       if ( verbose ) { print("Update predictions.") }
       
-      for ( ix in unique(data$caseID) ) { # Iterate over cases.
-        
         # Update predictions.
-        pred <- update_predictions(labelled[labelled$caseID == ix, ], 
-                                   unlabelled[unlabelled$caseID == ix, ], 
-                                   target, use_logic, plot = plot & i %in% plot_iter, iter = i) 
+        pred <- update_predictions(labelled, 
+                                   unlabelled, 
+                                   target, 
+                                   use_logic, 
+                                   plot = plot & i %in% plot_iter, iter = i) 
         
-        unlabelled[unlabelled$caseID == ix, names(pred)] <- pred
-        
-      }
-      
-      # Estimate targets, by case.
-      est_by_case <- estimate_targets_by_case(labelled %>% 
-                                              add_row(certainty_selections) %>% 
-                                              filter(impact_speed0 > 0 & final_weight > 0), "final_weight")
+        unlabelled[, names(pred)] <- pred
 
-      # Add to unlabelled set.
-      # unlabelled %<>% 
-      #   dplyr::select(-contains("mean")) %>% 
-      #   left_join(est_by_case, by = "caseID") %>% 
-      #   mutate(mean_impact_speed_reduction = ifelse(is.na(mean_impact_speed_reduction), 0, mean_impact_speed_reduction),
-      #          mean_injury_risk_reduction = ifelse(is.na(mean_injury_risk_reduction), 0, mean_injury_risk_reduction),
-      #          mean_crash_avoidance = ifelse(is.na(mean_crash_avoidance), 0, mean_crash_avoidance))
-
-      # Add to unlabelled set.
-      unlabelled %<>% 
-        dplyr::select(-contains("mean")) %>% 
-        left_join(est_by_case, by = "caseID") %>% 
-        mutate(mean_impact_speed_reduction = 0,
-               mean_injury_risk_reduction = 0,
-               mean_crash_avoidance = 0)
-      
     }  # End update predictions.
     
+
+    # Update estimates, per case ----
+    if ( sampling_method == "active sampling" && i > 5 ) {
+      est_by_case <- estimate_targets_by_case(labelled %>% 
+                                                add_row(certainty_selections) %>% 
+                                                filter(impact_speed0 > 0 & final_weight > 0), "final_weight",
+                                              n_cases)
+      
+      # BLUP estimate.
+      sigma_e <- sqrt(apply(se_by_case^2 * est_by_case$n, 2, mean, na.rm = TRUE))
+      sigma_u <- apply(est_by_case[, c("mean_impact_speed_reduction", "mean_injury_risk_reduction", "mean_crash_avoidance")], 2, sd, na.rm = TRUE)
+      icc <- vapply(1:n_cases, function(ix) sigma_u^2 / (sigma_u^2 + sigma_e^2 / est_by_case$n[ix]), numeric(3))
+      est_by_case[, 3:5] <- t(icc) * est_by_case[, 3:5] + t((1 - icc) * est)
+      
+      # Fix NAs.
+      est_by_case$mean_impact_speed_reduction[is.na(est_by_case$mean_impact_speed_reduction)] <- est["mean_impact_speed_reduction"]
+      est_by_case$mean_injury_risk_reduction[is.na(est_by_case$mean_injury_risk_reduction)] <- est["mean_injury_risk_reduction"]
+      est_by_case$mean_crash_avoidance[is.na(est_by_case$mean_crash_avoidance)] <- est["crash_avoidance_rate"]
+      
+      # BLUP estimate of standard error.
+      se_by_case_blup <- t(vapply(1:n_cases, 
+                                  function(ix) sqrt( (est_by_case$n[ix] * se_by_case[ix, ]^2 + sigma_e^2) / (est_by_case$n[ix] + 1) ), 
+                                  numeric(3)))
+      
+      # Fix NAs.
+      se_by_case_blup <- as.data.frame(se_by_case_blup)
+      se_by_case_blup[which(is.na(se_by_case_blup[, 1])), 1] <- sigma_e[1]
+      se_by_case_blup[which(is.na(se_by_case_blup[, 2])), 2] <- sigma_e[2]
+      se_by_case_blup[which(is.na(se_by_case_blup[, 3])), 3] <- sigma_e[3]
+      names(se_by_case_blup) <- c("se_mean_impact_speed_reduction", "se_mean_injury_risk_reduction", "se_mean_crash_avoidance")
+      
+      est_by_case <- cbind(est_by_case, se_by_case_blup) %>% 
+        dplyr::select(-n)
+      
+      # Add to unlabelled set.
+      unlabelled %<>%
+        dplyr::select(-contains("mean")) %>%
+        left_join(est_by_case, by = "caseID") %>%
+        mutate(mean_impact_speed_reduction = ifelse(is.na(mean_impact_speed_reduction), 0, mean_impact_speed_reduction),
+               mean_injury_risk_reduction = ifelse(is.na(mean_injury_risk_reduction), 0, mean_injury_risk_reduction),
+               mean_crash_avoidance = ifelse(is.na(mean_crash_avoidance), 0, mean_crash_avoidance))  
+    }
     
     # Calculate sampling probabilities. ----
-
     prob <- calculate_sampling_scheme(unlabelled, 
                                       labelled, 
                                       sampling_method, 
@@ -475,10 +491,14 @@ active_sampling <- function(data,
     
     if ( nrow(crashes) > 0 ) { 
       boot <- boot(crashes, 
-                   statistic = function(data, ix) estimate_targets(data[ix, ], weightvar = "final_weight"), 
+                   statistic = function(data, ix) c(unlist(estimate_targets(data[ix, ], weightvar = "final_weight")), unlist(estimate_targets_by_case(data[ix, ], weightvar = "final_weight", n_cases)[, -c(1, 2)])),
                    R = nboot) 
-      se <- apply(boot$t, 2 , sd) # Standard error of estimates.
+      se <- apply(boot$t, 2 , sd, na.rm = TRUE) # Standard error of estimates.
     }  
+    
+    se_by_case <- matrix(nrow = n_cases, ncol = 3, se[-c(1:3)])
+    se_by_case[se_by_case == 0] <- NA # Set zero to NA.
+    se <- se[1:3]
 
     # Confidence intervals.
     lower <- est - qnorm(0.975) * se 

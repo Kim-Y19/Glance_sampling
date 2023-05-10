@@ -24,16 +24,16 @@ df <- df %>%
 # nboot <- 200
 # df$eoff_acc_prob <- 1
 
-for (i in 1:1) {
+for (i in 1:10) {
   tic()
   print(sprintf("%d", i))
   res <- active_sampling(df, 
                          sampling_method = "active", 
                          proposal_dist = "NA",
-                         target = "impact speed", 
+                         target = "crash avoidance", 
                          use_logic = TRUE,
                          n_per_case = 1, 
-                         niter = 15, 
+                         niter = 10, 
                          verbose = TRUE, 
                          plot = FALSE)
   toc()

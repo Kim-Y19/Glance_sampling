@@ -47,36 +47,40 @@ calculate_sampling_scheme <- function(unlabelled,
       mu <- unlabelled$mean_impact_speed_reduction
       pred <- unlabelled$pred_impact_speed_reduction
       sigma <- unlabelled$sigma_impact_speed_reduction
+      se_est <- unlabelled$se_mean_impact_speed_reduction
 
     } else if ( target == "injury risk reduction" ) {
       
       mu <- unlabelled$mean_injury_risk_reduction
       pred <- unlabelled$pred_injury_risk_reduction
       sigma <- unlabelled$sigma_injury_risk_reduction
+      se_est <- unlabelled$se_mean_injury_risk_reduction
       
     } else if ( target == "crash avoidance" ) {
       
       mu <- 1 - unlabelled$mean_crash_avoidance
       pred <- unlabelled$pred_collision1
       sigma <- unlabelled$sigma_collision1
+      se_est <- unlabelled$se_mean_crash_avoidance
       
     } 
      
     p <- unlabelled$eoff_acc_prob
-    q <- 1 # unlabelled$pred_collision0
-    size <- p * sqrt(q * ((pred - mu)^2 + sigma^2))
+    q <- unlabelled$pred_collision0
+    size <- p * sqrt(q * ((pred - mu)^2 + sigma^2 + se_est^2))
 
   } 
-  
-  # If there are any NAs: use density importance sampling.
-  if ( any(is.na(size)) ) {
-    size <- unlabelled$eoff_acc_prob
-  }
-  
+
   # Within each case: sampling probability proportional to size.
   sampling_probability <- rep(NA, nrow(unlabelled))
   for ( id in unique(unlabelled$caseID) ) {
     ix <- which(unlabelled$caseID == id)  
+    
+    # If there are any NAs: use density importance sampling.
+    if ( any(is.na(size[ix])) ) {
+      size[ix] <- unlabelled$eoff_acc_prob[ix]
+    }
+    
     sampling_probability[ix] <- size[ix] / sum(size[ix])
   }
 
