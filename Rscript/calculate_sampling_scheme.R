@@ -79,6 +79,7 @@ calculate_sampling_scheme <- function(unlabelled,
     # If there are any NAs: use density importance sampling.
     if ( any(is.na(size[ix])) ) {
       size[ix] <- unlabelled$eoff_acc_prob[ix]
+      print("Density importance sampling")
     }
     
     sampling_probability[ix] <- size[ix] / sum(size[ix])

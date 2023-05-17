@@ -143,9 +143,9 @@ active_sampling <- function(data,
   # For optimised sampling:
   # Prediction models will be updated n_update observations have been collected.
   # Find corresponding iteration indices model_update_iterations.
-  if ( sampling_method == "active sampling" & niter > 5 ) {
+  if ( sampling_method == "active sampling" & niter > 1 ) {
     
-    model_update_iterations <- seq(6, niter)
+    model_update_iterations <- seq(1, niter)
     
     if ( verbose ) {
       print(sprintf("Predictions updated at iterations %s", paste(model_update_iterations, collapse = ", ")))
@@ -306,15 +306,16 @@ active_sampling <- function(data,
                                    unlabelled, 
                                    target, 
                                    use_logic, 
+                                   verbose = verbose,
                                    plot = plot & i %in% plot_iter, iter = i) 
         
         unlabelled[, names(pred)] <- pred
-
+        
     }  # End update predictions.
     
 
     # Update estimates, per case ----
-    if ( sampling_method == "active sampling" && i > 5 ) {
+    if ( sampling_method == "active sampling" && i > min(model_update_iterations) ) {
       est_by_case <- estimate_targets_by_case(labelled %>% 
                                                 add_row(certainty_selections) %>% 
                                                 filter(impact_speed0 > 0 & final_weight > 0), "final_weight",
@@ -331,6 +332,7 @@ active_sampling <- function(data,
       est_by_case$mean_injury_risk_reduction[is.na(est_by_case$mean_injury_risk_reduction)] <- est["mean_injury_risk_reduction"]
       est_by_case$mean_crash_avoidance[is.na(est_by_case$mean_crash_avoidance)] <- est["crash_avoidance_rate"]
       
+    
       # BLUP estimate of standard error.
       se_by_case_blup <- t(vapply(1:n_cases, 
                                   function(ix) sqrt( (est_by_case$n[ix] * se_by_case[ix, ]^2 + sigma_e^2) / (est_by_case$n[ix] + 1) ), 
@@ -345,7 +347,7 @@ active_sampling <- function(data,
       
       est_by_case <- cbind(est_by_case, se_by_case_blup) %>% 
         dplyr::select(-n)
-      
+
       # Add to unlabelled set.
       unlabelled %<>%
         dplyr::select(-contains("mean")) %>%
@@ -353,7 +355,7 @@ active_sampling <- function(data,
         mutate(mean_impact_speed_reduction = ifelse(is.na(mean_impact_speed_reduction), 0, mean_impact_speed_reduction),
                mean_injury_risk_reduction = ifelse(is.na(mean_injury_risk_reduction), 0, mean_injury_risk_reduction),
                mean_crash_avoidance = ifelse(is.na(mean_crash_avoidance), 0, mean_crash_avoidance))  
-    }
+      }
     
     # Calculate sampling probabilities. ----
     prob <- calculate_sampling_scheme(unlabelled, 
@@ -497,7 +499,7 @@ active_sampling <- function(data,
     }  
     
     se_by_case <- matrix(nrow = n_cases, ncol = 3, se[-c(1:3)])
-    se_by_case[se_by_case == 0] <- NA # Set zero to NA.
+    se_by_case[se_by_case < 1e-12] <- NA # Too small values set to NA.
     se <- se[1:3]
 
     # Confidence intervals.
