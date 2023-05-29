@@ -1,4 +1,7 @@
 find_non_crashes <- function(new_sample, unlabelled) {
+  
+  unlabelled$non_crash0 <- 0
+  unlabelled$non_crash1 <- 0
 
   for ( i in unique(new_sample$caseID) ) { # Iterate over all cases.
     

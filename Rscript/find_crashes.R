@@ -1,11 +1,13 @@
 find_crashes <- function(new_sample, unlabelled) {
   
+  unlabelled$crash0 <- 0
+  unlabelled$crash1 <- 0
+  
   for ( i in unique(new_sample$caseID) ) { # Iterate over all cases.
    
     # New data for current case.
     labelled_i <- new_sample %>% 
       filter(caseID == i)
-    
     
     for ( j in 1:nrow(labelled_i) ) { # Iterative over all labelled data points.
       

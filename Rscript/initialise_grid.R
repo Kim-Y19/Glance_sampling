@@ -6,6 +6,7 @@ initialise_grid <- function(data, grid) {
     mutate(sim_count0 = 0, 
            sim_count1 = 0, 
            iter = 0,
+           max_impact0 = 0,
            batch_size = 0,
            batch_weight = 0,
            pi = 0,
@@ -36,7 +37,6 @@ initialise_grid <- function(data, grid) {
            non_crash0 = NA_integer_,
            non_crash1 = NA_integer_,
            max_impact0 = NA_integer_,
-           max_impact1 = NA_integer_,
            sim_count0 = 1,
            sim_count1 = 1,
            iter = NA) 

@@ -242,20 +242,27 @@ active_sampling <- function(data,
   if ( use_logic ) {
     unlabelled %<>% 
       mutate(sim_count1 = ifelse(impact_speed0 > 0, 1, 0))
+    
+    labelled$sim_count0 <- 1
+    labelled$sim_count1 <- 1
+  }
+  
+  if ( proposal_dist == "severity sampling" ) {
+    labelled$sim_count0 <- 1
   }
   
   # If no initialisation: start with empty sample.
-  if ( sampling_method != "active sampling"  ) {
-    labelled %<>% filter(1 == 0)
-  }
+  # if ( sampling_method != "active sampling"  ) {
+  #   labelled %<>% filter(1 == 0)
+  # }
 
   nseq0 <- nseq + n_init
-  nseq1 <- nseq + n_init * (sampling_method == "active sampling")
+  nseq1 <- nseq + n_init * (sampling_method == "active sampling" | use_logic)
 
   
   # Iterate. ----
   new_sample <- labelled 
-  for ( i in 1:niter ) {
+  for ( i in 1:5 ) {
     
     # Print iteration number if verbose = TRUE.
     if ( verbose ) { print(sprintf("Iteration %d", i)) }
@@ -272,13 +279,38 @@ active_sampling <- function(data,
                crash1 = ifelse(row_number() %in% ix$crashes0, 1, crash1)) 
       
       # Find all known maximal impact speed crashes in unlabelled dataset.
-      ix <- find_max_impact_crashes(new_sample, labelled, unlabelled)
+      ix <- find_max_impact_crashes(new_sample, maximpact, unlabelled)
       
       unlabelled %<>%
         mutate(max_impact0 = ifelse(row_number() %in% ix$max_impact_crashes0, 1, max_impact0),
-               max_impact1 = ifelse(row_number() %in% ix$max_impact_crashes1, 1, max_impact1),
-               sim_count0 = ifelse(row_number() %in% ix$max_impact_crashes0, 0, sim_count0),
-               sim_count1 = ifelse(row_number() %in% ix$max_impact_crashes1, 0, sim_count1)) 
+               sim_count0 = ifelse(row_number() %in% ix$max_impact_crashes0, 0, sim_count0)) 
+      
+      if ( i > 1 ) {
+        max_impact_certainty_selections <- unlabelled %>%
+          filter(row_number() %in% ix$max_impact_crashes0) %>%
+          mutate(max_impact0 = 1,
+                 sim_count0 = 0,
+                 sim_count1 = 0,
+                 batch_size = batch_size,
+                 nhits = 1,
+                 pi = 1,
+                 mu = n_per_case * pi,
+                 sampling_weight = 1 / mu,
+                 batch_weight = batch_size / nseq[i],
+                 final_weight = eoff_acc_prob * nhits * sampling_weight) %>%
+          dplyr::select(caseID, eoff, acc, eoff_acc_prob, sim_count0, sim_count1, iter, max_impact0, batch_size, nhits, pi, mu, sampling_weight, batch_weight, final_weight) %>%
+          mutate(iter = i - 1) %>%
+          left_join(data, by = c("caseID", "eoff", "acc", "eoff_acc_prob"))
+        
+        # Add to labelled set.
+        labelled %<>%
+          add_row(max_impact_certainty_selections)
+        
+        # Remove from unlabelled set.
+        unlabelled %<>% 
+          filter(!(row_number() %in% ix$max_impact_crashes0))  
+        
+      }
       
       # Find all known non-crashes in unlabelled dataset.
       ix <- find_non_crashes(new_sample, unlabelled)
@@ -317,6 +349,7 @@ active_sampling <- function(data,
     # Update estimates, per case ----
     if ( sampling_method == "active sampling" && i > min(model_update_iterations) ) {
       est_by_case <- estimate_targets_by_case(labelled %>% 
+                                                filter(is.na(max_impact0) | max_impact0 != 1) %>% 
                                                 add_row(certainty_selections) %>% 
                                                 filter(impact_speed0 > 0 & final_weight > 0), "final_weight",
                                               n_cases)
@@ -479,6 +512,7 @@ active_sampling <- function(data,
     
     # Estimate mean impact speed reduction, mean injury risk reduction, crash avoidance rate. 
     est <- estimate_targets(labelled %>% 
+                              filter(is.na(max_impact0) | max_impact0 != 1) %>% 
                               add_row(certainty_selections) %>% 
                               filter(impact_speed0 > 0 & final_weight > 0), "final_weight")
     
@@ -488,6 +522,7 @@ active_sampling <- function(data,
     ix <- rep(1:nrow(labelled), labelled$nhits) # To repeat rows.
     crashes <- labelled[ix, ] %>%
       mutate(final_weight = eoff_acc_prob * batch_weight * sampling_weight) %>%
+      filter(is.na(max_impact0) | max_impact0 != 1) %>% 
       add_row(certainty_selections) %>% 
       filter(impact_speed0 > 0 & final_weight > 0)
     
