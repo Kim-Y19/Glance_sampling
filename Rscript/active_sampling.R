@@ -62,15 +62,18 @@ active_sampling <- function(data,
   
   
   # Make sure packages are loaded. ----
-  require("boot")
-  require("caret")
-  require("magrittr")
-  require("ranger")
-  require("stringr")
-  require("tidyverse")
+  library("boot")
+  library("caret")
+  library("magrittr")
+  library("ranger")
+  library("stringr")
+  library("tidyverse")
   
   
   # Calculate some variables. ----
+  data %<>%
+    dplyr::select(caseID, eoff, acc, eoff_acc_prob, impact_speed0, impact_speed1, injury_risk0, injury_risk1)
+
   maximpact <- data %>% 
     group_by(caseID) %>% 
     summarise(impact_speed_max0 = max(impact_speed0, na.rm = TRUE), .groups = "keep") %>% 
@@ -148,8 +151,8 @@ active_sampling <- function(data,
     model_update_iterations <- seq(1, niter)
     
     if ( verbose ) {
-      print(sprintf("Predictions updated at iterations %s", paste(model_update_iterations, collapse = ", ")))
-      print(sprintf("after %s observations.", paste(nseq[model_update_iterations - 1], collapse = ", ")))
+      cat(sprintf("Predictions updated at iterations %s", paste(model_update_iterations, collapse = ", ")))
+      cat(sprintf("\nafter %s observations.", paste(nseq[model_update_iterations - 1], collapse = ", ")))
       cat("\n")
     }
     
@@ -167,8 +170,8 @@ active_sampling <- function(data,
     plot_iter <- unique(plot_iter[plot_iter > 1])
     
     if ( verbose & length(n_update) > 0 ) {
-      print(sprintf("Plotting predictions and sampling schemes at iteration %s", paste(plot_iter, collapse = ", ")))
-      print(sprintf("after %s observations", paste(nseq[plot_iter - 1], collapse = ", ")))
+      cat(sprintf("Plotting predictions and sampling schemes at iteration %s", paste(plot_iter, collapse = ", ")))
+      cat(sprintf("after %s observations", paste(nseq[plot_iter - 1], collapse = ", ")))
       cat("\n")
     }  
   } 
@@ -262,10 +265,10 @@ active_sampling <- function(data,
   
   # Iterate. ----
   new_sample <- labelled 
-  for ( i in 1:5 ) {
+  for ( i in 1:niter ) {
     
     # Print iteration number if verbose = TRUE.
-    if ( verbose ) { print(sprintf("Iteration %d", i)) }
+    if ( verbose ) { cat(sprintf("\nIteration %d.", i)) }
     
     
     # If use_logic = TRUE. ---
@@ -331,7 +334,7 @@ active_sampling <- function(data,
     # Update predictions. ----
     if ( sampling_method == "active sampling" && i %in% model_update_iterations ) {
       
-      if ( verbose ) { print("Update predictions.") }
+      if ( verbose ) { cat("\nUpdate predictions.") }
       
         # Update predictions.
         pred <- update_predictions(labelled, 
@@ -395,7 +398,8 @@ active_sampling <- function(data,
                                       labelled, 
                                       sampling_method, 
                                       proposal_dist, 
-                                      target)
+                                      target,
+                                      verbose)
     
     # Plot. ----
     if ( sampling_method == "active sampling" & plot & i %in% c(1, plot_iter) ) {

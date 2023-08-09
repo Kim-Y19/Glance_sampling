@@ -211,18 +211,18 @@ update_predictions <- function(labelled,
   # Print.
   if ( verbose ) {
     
-    cat(sprintf("Out-of-bag R-squared:
-Impact speed reduction = %.2f
-Injury risk reduction = %.2f.
-
-Out-of-bag Accuracy:
-Baseline crash probability = %.2f.
-Counter-meature crash probability = %.2f.
-                ", 
-                r2_xhat,
-                r2_yhat,
-                p0_acc,
-                p1_acc))
+    if ( target == "impact speed reduction" ) {
+      cat(sprintf("Out-of-bag R-squared (impact speed reduction) = %.2f.\nOut-of-bag accuracy (baseline crash probability) = %.2f.",
+                  r2_xhat, p0_acc))
+      cat("\n")
+    } else if ( target == "injury risk reduction" ) {
+      cat(sprintf("Out-of-bag R-squared (injury risk reduction) = %.2f.\nOut-of-bag accuracy (baseline crash probability) = %.2f.",
+                  r2_yhat, p0_acc))
+    } else if ( target == "crash avoidance") {
+      cat(sprintf("Out-of-bag accuracy\nBaseline crash probability = %.2f.\nCounter-meature crash probability = %.2f.",
+                  p0_acc, p1_acc))
+    }
+    
     cat("\n")
     
   }

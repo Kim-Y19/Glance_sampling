@@ -11,8 +11,7 @@ calculate_sampling_scheme <- function(unlabelled,
                                                  "impact speed reduction",
                                                  "injury risk reduction", 
                                                  "crash avoidance"),
-                                      est = NULL,
-                                      r2 = NULL) {
+                                      verbose = FALSE) {
 
 
   # Calculate 'size' of pps (probability proportional to size) sampling. ----
@@ -79,7 +78,9 @@ calculate_sampling_scheme <- function(unlabelled,
     # If there are any NAs: use density importance sampling.
     if ( any(is.na(size[ix])) ) {
       size[ix] <- unlabelled$eoff_acc_prob[ix]
-      print("Density importance sampling")
+      # if ( verbose ) {
+      #   print("NAs in size vector found. Using density importance sampling.")
+      # }
     }
     
     sampling_probability[ix] <- size[ix] / sum(size[ix])
