@@ -172,8 +172,7 @@ allres %<>%
   mutate()
 
 plt <- allres %>% 
-  filter(sampling_method != "simple random sampling") %>% 
-  filter(use_logic)
+  filter(sampling_method != "simple random sampling") 
 
 fig1 <- ggplot(plt, aes(x = iter, y = RMSE_MISR, linetype = sampling_method, colour = label, shape = use_logic)) + 
   geom_line() + 
