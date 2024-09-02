@@ -16,17 +16,17 @@ estimate_targets_by_case <- function(data, weightvar = NULL, ncases = NULL) {
     
   }
   
-  n_final <- rep(0, ncases)
-  denom_final <- misr_final <- mirr_final <- mca_final <- rep(NA, ncases)
-  names(n_final) <- names(denom_final) <- names(misr_final) <- names(mirr_final) <- names(mca_final) <- 1:ncases
+  n_final <- rep(0, length(ncases))
+  denom_final <- misr_final <- mirr_final <- mca_final <- rep(NA, length(ncases))
+  names(n_final) <- names(denom_final) <- names(misr_final) <- names(mirr_final) <- names(mca_final) <- (ncases)
   
-  n_final[intersect(1:ncases, names(n))] <- n
-  denom_final[intersect(1:ncases, names(n))] <- denom
-  misr_final[intersect(1:ncases, names(n))] <- mean_impact_speed_reduction
-  mirr_final[intersect(1:ncases, names(n))] <- mean_injury_risk_reduction
-  mca_final[intersect(1:ncases, names(n))] <- mean_crash_avoidance
+  n_final[intersect(ncases, names(n))] <- n
+  denom_final[intersect(ncases, names(n))] <- denom
+  misr_final[intersect(ncases, names(n))] <- mean_impact_speed_reduction
+  mirr_final[intersect(ncases, names(n))] <- mean_injury_risk_reduction
+  mca_final[intersect(ncases, names(n))] <- mean_crash_avoidance
   
-  
+  # browser()
   return(tibble(caseID = as.character(names(n_final)),
                 n = n_final,
                 mean_impact_speed_reduction = misr_final,
