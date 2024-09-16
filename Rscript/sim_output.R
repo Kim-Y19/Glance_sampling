@@ -16,16 +16,18 @@ sim_output <- function(df,input,inputparameter){
   
   for (k in 1:Sim_n){
     print(paste("simulation",k,"start,","reduced logic is",input$use_logic,", number per iteration:",batch_size,",total iteration:",niter))
-    set.seed(k)
-    out <- active_sampling (df, sampling_method, 
+    set.seed(k+100)
+    gc()
+    out <- active_sampling (df, 
+                            sampling_method, 
                             proposal_dist,
                             target,
                             use_logic, # TRUE or FALSE 
                             batch_size,
                             niter,
-                            nboot,
                             verbose,
-                            plot = FALSE)
+                            plot = FALSE,
+                            nboot)
     #print(out$results$neff0)
     res_list[[k]] <- out$results
     labelled_list[[k]] <- out$labelled

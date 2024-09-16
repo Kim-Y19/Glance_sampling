@@ -135,11 +135,12 @@ active_sampling <- function(data,
   # Set some parameters. ----
   
   res <- NULL # To store results.
+  case_ID_sum <- unique(data$caseID)
   ground_truth <- estimate_targets(data, weightvar = "eoff_acc_prob") # Calculate target quantities on full data.
   n_cases <- length(unique(data$caseID)) # Number of cases.
   batch_size <- n_per_case * n_cases # Batch size per iteration.
   nseq <- cumsum(rep(batch_size, niter)) # Cumulative number of baseline scenario simulations. 
-
+# browser()
   # For optimised sampling:
   # Prediction models will be updated n_update observations have been collected.
   # Find corresponding iteration indices model_update_iterations.
@@ -310,9 +311,9 @@ active_sampling <- function(data,
           add_row(max_impact_certainty_selections)
         
         # Remove from unlabelled set.
-        unlabelled %<>% 
-          filter(!(row_number() %in% ix$max_impact_crashes0))  
-        
+        unlabelled %<>%
+          filter(!(row_number() %in% ix$max_impact_crashes0))
+      #   
       }
       
       # Find all known non-crashes in unlabelled dataset.
@@ -325,9 +326,9 @@ active_sampling <- function(data,
                sim_count1 = ifelse(row_number() %in% ix$non_crashes1, 0, sim_count1)) 
       
       # Remove certainty non-crashes from unlabelled set.
-      unlabelled %<>% 
-        filter(!(row_number() %in% ix$non_crashes0)) 
-      
+      unlabelled %<>%
+        filter(!(row_number() %in% ix$non_crashes0))
+    #   
     }
 
 
@@ -355,7 +356,7 @@ active_sampling <- function(data,
                                                 filter(is.na(max_impact0) | max_impact0 != 1) %>% 
                                                 add_row(certainty_selections) %>% 
                                                 filter(impact_speed0 > 0 & final_weight > 0), "final_weight",
-                                              n_cases)
+                                              case_ID_sum)
       
       # BLUP estimate.
       sigma_e <- sqrt(apply(se_by_case^2 * est_by_case$n, 2, mean, na.rm = TRUE))
@@ -466,7 +467,7 @@ active_sampling <- function(data,
       nhits[ix] <- as.numeric(rmultinom(n = 1, size = n_per_case, prob = prob$sampling_probability[ix]))
     }
     
-    
+    # browser()
     # Get data for sampled observations.
     new_sample <- unlabelled %>% 
       mutate(batch_size = batch_size, 
@@ -532,7 +533,7 @@ active_sampling <- function(data,
     
     if ( nrow(crashes) > 0 ) { 
       boot <- boot(crashes, 
-                   statistic = function(data, ix) c(unlist(estimate_targets(data[ix, ], weightvar = "final_weight")), unlist(estimate_targets_by_case(data[ix, ], weightvar = "final_weight", n_cases)[, -c(1, 2)])),
+                   statistic = function(data, ix) c(unlist(estimate_targets(data[ix, ], weightvar = "final_weight")), unlist(estimate_targets_by_case(data[ix, ], weightvar = "final_weight", case_ID_sum)[, -c(1, 2)])),
                    R = nboot) 
       se <- apply(boot$t, 2 , sd, na.rm = TRUE) # Standard error of estimates.
     }  
